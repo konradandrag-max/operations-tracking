@@ -1,4 +1,4 @@
-const BASE = import.meta.env.VITE_API_URL ?? ''
+const BASE = import.meta.env.VITE_API_URL ?? 'https://operations-tracking-production.up.railway.app'
 
 export type Plant = 'KSB2' | 'KSB6' | 'KSB7'
 export type ActivityType = 'SETUP' | 'CYCLE'
