@@ -11,8 +11,9 @@ const app = express()
 const PORT = process.env.PORT ?? 3001
 
 app.use(helmet())
+const corsOrigin = process.env.CORS_ORIGIN
 app.use(cors({
-  origin: process.env.CORS_ORIGIN?.split(',') ?? ['http://localhost:5173', 'http://localhost:5174'],
+  origin: corsOrigin === '*' ? '*' : (corsOrigin?.split(',') ?? ['http://localhost:5173', 'http://localhost:5174']),
   methods: ['GET', 'POST', 'PUT', 'PATCH'],
 }))
 app.use(express.json())
