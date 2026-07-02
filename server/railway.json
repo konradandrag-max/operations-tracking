@@ -5,7 +5,7 @@
     "buildCommand": "npx prisma generate && npm run build"
   },
   "deploy": {
-    "startCommand": "npx prisma migrate deploy && npx tsx src/index.ts",
+    "startCommand": "npx prisma db push && npx tsx src/index.ts",
     "restartPolicyType": "ON_FAILURE"
   }
 }
