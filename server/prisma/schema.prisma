@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Plant {
+  KSB2
+  KSB6
+  KSB7
+}
+
+enum ActivityType {
+  SETUP
+  CYCLE
+}
+
+enum ActivityStatus {
+  RUNNING
+  PAUSED
+  ENDED
+}
+
+model Machine {
+  machine_number String   @id
+  plant          Plant
+  description    String?
+  active         Boolean  @default(true)
+  activities     Activity[]
+
+  @@map("machines")
+}
+
+model ItemMaster {
+  item_master_no           String   @id
+  part_number              String
+  description              String
+  standard_setup_time_sec  Int
+  standard_cycle_time_sec  Int
+  last_imported_at         DateTime @default(now())
+  activities               Activity[]
+
+  @@map("item_masters")
+}
+
+model Activity {
+  id                String           @id @default(cuid())
+  machine_number    String
+  item_master_no    String
+  activity_type     ActivityType
+  status            ActivityStatus   @default(RUNNING)
+  started_at        DateTime         @default(now())
+  ended_at          DateTime?
+  // Set true once elapsed time crosses 100% of standard
+  overdue_flag      Boolean          @default(false)
+  acknowledged_by   String?
+  acknowledged_at   DateTime?
+
+  machine           Machine          @relation(fields: [machine_number], references: [machine_number])
+  item_master       ItemMaster       @relation(fields: [item_master_no], references: [item_master_no])
+  intervals         ActivityInterval[]
+
+  @@map("activities")
+}
+
+model ActivityInterval {
+  id             String    @id @default(cuid())
+  activity_id    String
+  interval_start DateTime  @default(now())
+  interval_end   DateTime?
+
+  activity       Activity  @relation(fields: [activity_id], references: [id], onDelete: Cascade)
+
+  @@map("activity_intervals")
+}

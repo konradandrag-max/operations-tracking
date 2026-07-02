@@ -1,0 +1,7 @@
+item_master_no,part_number,description,standard_setup_time_sec,standard_cycle_time_sec
+IM-00001,PN-1001,Impeller Housing Cover 150mm,180,45
+IM-00002,PN-1002,Pump Shaft Type A 200mm,300,90
+IM-00003,PN-1003,Bearing Housing Std,240,60
+IM-00004,PN-1004,Volute Casing KSB Etanorm,420,120
+IM-00005,PN-1005,Seal Ring 75mm,120,30
+IM-00006,PN-1006,Shaft Sleeve 60mm,180,40
