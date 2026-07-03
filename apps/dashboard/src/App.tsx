@@ -14,6 +14,14 @@ export default function App() {
   const [plantFilter, setPlantFilter] = useState<Plant | 'ALL'>('ALL')
   const [overdueOnly, setOverdueOnly] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [showExportPicker, setShowExportPicker] = useState(false)
+  const [exportFrom, setExportFrom] = useState(() => {
+    const d = new Date()
+    const day = d.getDay()
+    d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day))
+    return d.toISOString().slice(0, 10)
+  })
+  const [exportTo, setExportTo] = useState(() => new Date().toISOString().slice(0, 10))
   const { activities, lastUpdated, error, setActivities } = useActiveActivities()
 
   const overdueCount = activities.filter((a) => a.overdue_flag && !a.acknowledged_at).length
@@ -55,16 +63,55 @@ export default function App() {
             )}
           </div>
           <div className="flex items-center gap-4">
-            <button
-              onClick={async () => {
-                setExporting(true)
-                try { await exportWeeklyCsv() } finally { setExporting(false) }
-              }}
-              disabled={exporting}
-              className="rounded-lg bg-indigo-700 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-600 disabled:opacity-50"
-            >
-              {exporting ? 'Exporting...' : 'Export Week CSV'}
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowExportPicker((v) => !v)}
+                className="rounded-lg bg-indigo-700 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-600"
+              >
+                Export CSV
+              </button>
+              {showExportPicker && (
+                <div className="absolute right-0 top-11 z-20 bg-gray-800 border border-gray-700 rounded-xl p-4 shadow-xl flex flex-col gap-3 min-w-[240px]">
+                  <p className="text-sm font-semibold text-white">Select date range</p>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-400">From</label>
+                    <input
+                      type="date"
+                      value={exportFrom}
+                      onChange={(e) => setExportFrom(e.target.value)}
+                      className="rounded-lg bg-gray-700 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-400">To</label>
+                    <input
+                      type="date"
+                      value={exportTo}
+                      onChange={(e) => setExportTo(e.target.value)}
+                      className="rounded-lg bg-gray-700 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <button
+                    onClick={async () => {
+                      setExporting(true)
+                      setShowExportPicker(false)
+                      try {
+                        await exportWeeklyCsv(
+                          new Date(exportFrom).toISOString(),
+                          new Date(exportTo + 'T23:59:59').toISOString()
+                        )
+                      } finally {
+                        setExporting(false)
+                      }
+                    }}
+                    disabled={exporting || !exportFrom || !exportTo}
+                    className="rounded-lg bg-indigo-600 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+                  >
+                    {exporting ? 'Exporting...' : 'Download CSV'}
+                  </button>
+                </div>
+              )}
+            </div>
             {SHEET_URL && (
               <a
                 href={SHEET_URL}

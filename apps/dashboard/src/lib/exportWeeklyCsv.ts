@@ -26,9 +26,9 @@ function escapeCsv(val: string | number): string {
     : s
 }
 
-export async function exportWeeklyCsv() {
-  const from = weekStart()
-  const activities: HistoryActivity[] = await api.getHistory({ from })
+export async function exportWeeklyCsv(from?: string, to?: string) {
+  const fromDate = from ?? weekStart()
+  const activities: HistoryActivity[] = await api.getHistory({ from: fromDate, to })
 
   // Group by part + machine
   type Key = string
@@ -84,9 +84,10 @@ export async function exportWeeklyCsv() {
   const blob = new Blob([csv], { type: 'text/csv' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
-  const weekLabel = new Date(from).toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' })
+  const fmt = (d: string) => new Date(d).toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' })
+  const label = to ? `${fmt(fromDate)}_to_${fmt(to)}` : fmt(fromDate)
   a.href = url
-  a.download = `weekly-report-${weekLabel}.csv`
+  a.download = `production-report-${label}.csv`
   a.click()
   URL.revokeObjectURL(url)
 }
