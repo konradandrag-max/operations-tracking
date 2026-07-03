@@ -147,6 +147,9 @@ export default function App() {
 
         {tab === 'history' && <HistoryView />}
       </main>
+      <footer className="text-center text-xs text-gray-700 py-2">
+        &copy; {new Date().getFullYear()} Konrad Andrag
+      </footer>
     </div>
   )
 }
