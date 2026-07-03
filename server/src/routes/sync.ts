@@ -33,7 +33,7 @@ router.post('/', async (_req, res) => {
     return res.status(503).json({ error: 'GOOGLE_SHEET_ID not configured' })
   }
 
-  const results = { machines: { upserted: 0, skipped: 0 }, parts: { upserted: 0, skipped: 0 }, errors: [] as string[] }
+  const results = { machines: { upserted: 0, removed: 0, deactivated: 0, skipped: 0 }, parts: { upserted: 0, skipped: 0 }, errors: [] as string[] }
 
   // Sync machines
   try {
@@ -41,6 +41,8 @@ router.post('/', async (_req, res) => {
     const response = await fetch(sheetCsvUrl(MACHINES_SHEET_ID))
     if (!response.ok) throw new Error(`Failed to fetch Machines sheet: ${response.status}`)
     const rows = parseCsv(await response.text()).slice(1) // skip header
+
+    const sheetMachineNos = new Set<string>()
 
     for (const row of rows) {
       const machine_number = row[0]?.toUpperCase()
@@ -52,12 +54,31 @@ router.post('/', async (_req, res) => {
         continue
       }
 
+      sheetMachineNos.add(machine_number)
       await prisma.machine.upsert({
         where: { machine_number },
         update: { plant, description, active: true },
         create: { machine_number, plant, description, active: true },
       })
       results.machines.upserted++
+    }
+
+    // Remove machines not in the sheet
+    if (sheetMachineNos.size > 0) {
+      const dbMachines = await prisma.machine.findMany({ select: { machine_number: true } })
+      const toRemove = dbMachines.map((m) => m.machine_number).filter((n) => !sheetMachineNos.has(n))
+
+      for (const machine_number of toRemove) {
+        const actCount = await prisma.activity.count({ where: { machine_number } })
+        if (actCount === 0) {
+          await prisma.machine.delete({ where: { machine_number } })
+          results.machines.removed++
+        } else {
+          // Has history — soft delete so data is preserved
+          await prisma.machine.update({ where: { machine_number }, data: { active: false } })
+          results.machines.deactivated++
+        }
+      }
     }
   } catch (err) {
     results.errors.push(`Machines: ${(err as Error).message}`)

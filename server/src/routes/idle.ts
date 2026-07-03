@@ -68,9 +68,9 @@ router.get('/daily-detail', async (req, res) => {
   // End of the period we care about: for today use now (capped at 22:30), for past days use 22:30
   const endOfPeriod = isToday ? (now < we ? now : we) : we
 
-  // All registered machines
+  // All active machines (inactive = removed from spreadsheet but has history)
   const allMachines = await prisma.machine.findMany({
-    where: { ...(plantList.length > 0 ? { plant: { in: plantList } } : {}) },
+    where: { active: true, ...(plantList.length > 0 ? { plant: { in: plantList } } : {}) },
     orderBy: { machine_number: 'asc' },
   })
 
