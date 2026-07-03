@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
+import { prisma } from './lib/prisma.js'
 
 import machinesRouter from './routes/machines.js'
 import itemMasterRouter from './routes/itemMaster.js'
@@ -41,8 +42,19 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
   res.status(500).json({ error: 'Internal server error' })
 })
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`)
+
+  // One-time cleanup: remove clutter machine KSB2-001
+  try {
+    const actCount = await prisma.activity.count({ where: { machine_number: 'KSB2-001' } })
+    if (actCount === 0) {
+      await prisma.machine.deleteMany({ where: { machine_number: 'KSB2-001' } })
+      console.log('Deleted machine KSB2-001')
+    } else {
+      console.log(`Skipped deleting KSB2-001: has ${actCount} activities`)
+    }
+  } catch { /* already gone */ }
 
   // Sync from Google Sheets every 5 minutes if GOOGLE_SHEET_ID is configured
   if (process.env.GOOGLE_SHEET_ID) {
