@@ -9,7 +9,13 @@ const router = Router()
 // NOTE: Socket.io is a drop-in upgrade path if 5-second polling proves too slow.
 const DAILY_IDLE_LIMIT_SEC = 3 * 60 * 60 // 3 hours — weekdays only
 
-function isWeekend(d: Date) { const w = d.getDay(); return w === 0 || w === 6 }
+const SAST_OFFSET_MS = 2 * 60 * 60 * 1000
+function todayDateStrSAST() { return new Date(Date.now() + SAST_OFFSET_MS).toISOString().slice(0, 10) }
+function isWeekend(d: Date) {
+  const dateStr = new Date(d.getTime() + SAST_OFFSET_MS).toISOString().slice(0, 10)
+  const dow = new Date(dateStr + 'T12:00:00Z').getUTCDay()
+  return dow === 0 || dow === 6
+}
 
 router.get('/active', async (_req, res) => {
   const now = new Date()

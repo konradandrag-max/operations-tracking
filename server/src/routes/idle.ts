@@ -4,24 +4,34 @@ import { prisma } from '../lib/prisma.js'
 
 const router = Router()
 
-const WORK_START_H  = 6
-const WORK_END_H    = 22
-const WORK_END_M    = 30
+// South Africa Standard Time = UTC+2 (no daylight saving)
+const SAST_OFFSET_MS = 2 * 60 * 60 * 1000
+
+// Working hours in UTC (SAST = UTC+2)
+// 06:00 SAST = 04:00 UTC
+// 22:30 SAST = 20:30 UTC
+const WORK_START_UTC = 'T04:00:00Z'
+const WORK_END_UTC   = 'T20:30:00Z'
+
 const DAILY_IDLE_LIMIT_SEC = 3 * 60 * 60
 
-function todayDateStr() {
-  return new Date().toISOString().slice(0, 10)
+// Current date in SAST (YYYY-MM-DD)
+function todayDateStr(): string {
+  return new Date(Date.now() + SAST_OFFSET_MS).toISOString().slice(0, 10)
 }
 
-function isWeekend(date: Date): boolean {
-  const d = date.getDay()
-  return d === 0 || d === 6
+// Check weekend based on the date string (interpreted as SAST calendar date)
+function isWeekend(dateStr: string): boolean {
+  const d = new Date(dateStr + 'T12:00:00Z') // noon UTC of that SAST day
+  const dow = d.getUTCDay()
+  return dow === 0 || dow === 6
 }
 
-function workingSecInPeriod(from: Date, to: Date, targetDate: Date): number {
-  if (isWeekend(targetDate)) return 0
-  const ws = new Date(targetDate); ws.setHours(WORK_START_H, 0, 0, 0)
-  const we = new Date(targetDate); we.setHours(WORK_END_H, WORK_END_M, 0, 0)
+// Seconds within the working window that fall in [from, to)
+function workingSecInPeriod(from: Date, to: Date, dateStr: string): number {
+  if (isWeekend(dateStr)) return 0
+  const ws = new Date(dateStr + WORK_START_UTC) // 06:00 SAST in UTC
+  const we = new Date(dateStr + WORK_END_UTC)   // 22:30 SAST in UTC
   const cFrom = Math.max(from.getTime(), ws.getTime())
   const cTo   = Math.min(to.getTime(),   we.getTime())
   return cTo > cFrom ? Math.floor((cTo - cFrom) / 1000) : 0
@@ -42,23 +52,23 @@ router.post('/dismiss', async (req, res) => {
 })
 
 // GET /api/idle/daily-detail?date=YYYY-MM-DD&plants=KSB2,KSB6
-// Returns ALL registered machines in the given plant(s), idle counted from 6am
 router.get('/daily-detail', async (req, res) => {
   const dateStr     = (req.query.date   as string) || todayDateStr()
   const plantsParam = (req.query.plants as string) || ''
+  const plantList   = plantsParam ? plantsParam.split(',').map((p) => p.trim()).filter(Boolean) as Plant[] : []
 
-  const plantList  = plantsParam ? plantsParam.split(',').map((p) => p.trim()).filter(Boolean) as Plant[] : []
-  const targetDate = new Date(dateStr + 'T00:00:00')
-  const dayStart   = new Date(dateStr + 'T00:00:00.000')
-  const dayEnd     = new Date(dateStr + 'T23:59:59.999')
-  const now        = new Date()
-  const isToday    = dateStr === todayDateStr()
-  const weekend    = isWeekend(targetDate)
+  const now      = new Date()
+  const isToday  = dateStr === todayDateStr()
+  const weekend  = isWeekend(dateStr)
 
-  const ws = new Date(targetDate); ws.setHours(WORK_START_H, 0, 0, 0)
-  const we = new Date(targetDate); we.setHours(WORK_END_H,   WORK_END_M, 0, 0)
+  // Working window for this date (UTC)
+  const ws = new Date(dateStr + WORK_START_UTC) // 06:00 SAST
+  const we = new Date(dateStr + WORK_END_UTC)   // 22:30 SAST
 
-  // All registered machines in the requested plants (including inactive — just not yet used)
+  // End of the period we care about: for today use now (capped at 22:30), for past days use 22:30
+  const endOfPeriod = isToday ? (now < we ? now : we) : we
+
+  // All registered machines
   const allMachines = await prisma.machine.findMany({
     where: { ...(plantList.length > 0 ? { plant: { in: plantList } } : {}) },
     orderBy: { machine_number: 'asc' },
@@ -66,7 +76,10 @@ router.get('/daily-detail', async (req, res) => {
 
   if (allMachines.length === 0) return res.json([])
 
-  // Activities that overlap with this calendar day
+  // Calendar day boundaries (UTC midnight) — for querying overlapping activities
+  const dayStart = new Date(dateStr + 'T00:00:00Z')
+  const dayEnd   = new Date(dateStr + 'T23:59:59.999Z')
+
   const activities = await prisma.activity.findMany({
     where: {
       machine_number: { in: allMachines.map((m) => m.machine_number) },
@@ -88,23 +101,19 @@ router.get('/daily-detail', async (req, res) => {
     byMachine.set(act.machine_number, list)
   }
 
-  const endOfPeriod = isToday
-    ? (now < we ? now : we)
-    : we
-
   const results = allMachines.map((machine) => {
     const acts = byMachine.get(machine.machine_number) ?? []
     const timeline: object[] = []
     let totalWorkingIdleSec = 0
-    let cursor = ws // start counting from 06:00
+    let cursor = ws // start counting from 06:00 SAST
 
     for (let i = 0; i < acts.length; i++) {
       const act = acts[i]
 
-      // Idle gap from cursor to this activity's start (captures pre-shift and between-job idle)
+      // Idle gap: from cursor to this activity's start
       if (act.started_at > cursor) {
         const gapSec = Math.floor((act.started_at.getTime() - cursor.getTime()) / 1000)
-        const wkSec  = workingSecInPeriod(cursor, act.started_at, targetDate)
+        const wkSec  = workingSecInPeriod(cursor, act.started_at, dateStr)
         if (wkSec > 0) {
           totalWorkingIdleSec += wkSec
           timeline.push({ type: 'idle', from: cursor, to: act.started_at, duration_sec: gapSec, working_idle_sec: wkSec })
@@ -112,7 +121,7 @@ router.get('/daily-detail', async (req, res) => {
         cursor = act.started_at
       }
 
-      // Pauses: gaps between consecutive intervals
+      // Pauses inside this activity
       const pauses: object[] = []
       const ivs = act.intervals
       for (let j = 0; j < ivs.length - 1; j++) {
@@ -150,16 +159,19 @@ router.get('/daily-detail', async (req, res) => {
         pauses,
       })
 
-      cursor = act.ended_at && act.ended_at > cursor ? act.ended_at : (act.status !== ActivityStatus.ENDED ? endOfPeriod : cursor)
+      if (act.ended_at && act.ended_at > cursor) {
+        cursor = act.ended_at
+      } else if (act.status !== ActivityStatus.ENDED) {
+        cursor = endOfPeriod
+      }
     }
 
-    // Trailing idle: from cursor to endOfPeriod (i.e. now or 10:30pm)
+    // Trailing idle: cursor to endOfPeriod
     if (cursor < endOfPeriod) {
       const gapSec = Math.floor((endOfPeriod.getTime() - cursor.getTime()) / 1000)
-      const wkSec  = workingSecInPeriod(cursor, endOfPeriod, targetDate)
+      const wkSec  = workingSecInPeriod(cursor, endOfPeriod, dateStr)
       if (wkSec > 0) {
         totalWorkingIdleSec += wkSec
-        // to: null means "ongoing" (machine still idle now)
         const isOngoing = isToday && endOfPeriod.getTime() === now.getTime()
         timeline.push({ type: 'idle', from: cursor, to: isOngoing ? null : endOfPeriod, duration_sec: gapSec, working_idle_sec: wkSec })
       }
@@ -169,13 +181,13 @@ router.get('/daily-detail', async (req, res) => {
     const isCurrentlyIdle = !lastAct || (lastAct.status === ActivityStatus.ENDED && lastAct.ended_at !== null)
 
     return {
-      machine_number:          machine.machine_number,
-      plant:                   machine.plant,
-      machine_description:     machine.description,
-      total_working_idle_sec:  totalWorkingIdleSec,
-      flagged:                 !weekend && totalWorkingIdleSec > DAILY_IDLE_LIMIT_SEC,
-      is_currently_idle:       isCurrentlyIdle,
-      has_no_activity:         acts.length === 0,
+      machine_number:         machine.machine_number,
+      plant:                  machine.plant,
+      machine_description:    machine.description,
+      total_working_idle_sec: totalWorkingIdleSec,
+      flagged:                !weekend && totalWorkingIdleSec > DAILY_IDLE_LIMIT_SEC,
+      is_currently_idle:      isCurrentlyIdle,
+      has_no_activity:        acts.length === 0,
       timeline,
     }
   })
@@ -184,15 +196,15 @@ router.get('/daily-detail', async (req, res) => {
   return res.json(results)
 })
 
-// GET /api/idle — currently idle machines (for Live tab alert)
+// GET /api/idle — currently idle machines (Live tab alert)
 router.get('/', async (_req, res) => {
-  const now        = new Date()
-  const todayDate  = todayDateStr()
-  const targetDate = new Date(todayDate + 'T00:00:00')
-  const dayStart   = new Date(todayDate + 'T00:00:00.000')
-  const weekend    = isWeekend(targetDate)
+  const now       = new Date()
+  const todayDate = todayDateStr()
+  const weekend   = isWeekend(todayDate)
+  const ws        = new Date(todayDate + WORK_START_UTC) // 06:00 SAST
 
-  const ws = new Date(targetDate); ws.setHours(WORK_START_H, 0, 0, 0)
+  // Calendar day in UTC for DB query
+  const dayStart = new Date(todayDate + 'T00:00:00Z')
 
   const activeMachineNos = (
     await prisma.activity.findMany({
@@ -221,15 +233,16 @@ router.get('/', async (_req, res) => {
     }),
     prisma.dailyIdleDismissal.findMany({ where: { date: todayDate } }),
   ])
-  const todayIdleMap  = new Map(todayIdleRows.map((r) => [r.machine_number, r._sum.idle_before_start_sec ?? 0]))
-  const dismissalMap  = new Map(dismissals.map((d) => [d.machine_number, d]))
+  const todayIdleMap = new Map(todayIdleRows.map((r) => [r.machine_number, r._sum.idle_before_start_sec ?? 0]))
+  const dismissalMap = new Map(dismissals.map((d) => [d.machine_number, d]))
 
   const results = idleRows.map((act) => {
-    const idle_sec             = act.ended_at ? Math.floor((now.getTime() - act.ended_at.getTime()) / 1000) : 0
-    const currentWkIdle        = act.ended_at ? workingSecInPeriod(ws > act.ended_at ? ws : act.ended_at, now, targetDate) : 0
-    const today_idle_sec       = (todayIdleMap.get(act.machine_number) ?? 0) + idle_sec
+    const idle_sec              = act.ended_at ? Math.floor((now.getTime() - act.ended_at.getTime()) / 1000) : 0
+    const idleFrom              = act.ended_at && act.ended_at > ws ? act.ended_at : ws
+    const currentWkIdle         = act.ended_at ? workingSecInPeriod(idleFrom, now, todayDate) : 0
+    const today_idle_sec        = (todayIdleMap.get(act.machine_number) ?? 0) + idle_sec
     const today_working_idle_sec = (todayIdleMap.get(act.machine_number) ?? 0) + currentWkIdle
-    const dismissal            = dismissalMap.get(act.machine_number)
+    const dismissal             = dismissalMap.get(act.machine_number)
 
     return {
       machine_number:           act.machine_number,
