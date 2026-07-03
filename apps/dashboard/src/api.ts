@@ -50,6 +50,9 @@ export const api = {
       body: JSON.stringify({ acknowledged_by }),
     }).then((r) => r.json()),
 
+  endActivity: (id: string): Promise<{ ok: boolean }> =>
+    fetch(`${BASE}/api/activities/${id}/end`, { method: 'POST' }).then((r) => r.json()),
+
   getHistory: (params?: { plant?: string; machine_number?: string; from?: string; to?: string }): Promise<HistoryActivity[]> => {
     const qs = new URLSearchParams()
     if (params?.plant) qs.set('plant', params.plant)

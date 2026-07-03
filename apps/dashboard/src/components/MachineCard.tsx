@@ -4,6 +4,7 @@ import { ActiveActivity, api } from '../api.ts'
 interface Props {
   activity: ActiveActivity
   onAcknowledged: (id: string, by: string) => void
+  onRemoved: (id: string) => void
 }
 
 function formatSec(sec: number): string {
@@ -20,11 +21,13 @@ function computeLiveElapsed(activity: ActiveActivity): number {
   return activity.elapsed_sec + Math.floor(openMs / 1000)
 }
 
-export default function MachineCard({ activity, onAcknowledged }: Props) {
+export default function MachineCard({ activity, onAcknowledged, onRemoved }: Props) {
   const [elapsedSec, setElapsedSec] = useState(() => computeLiveElapsed(activity))
   const [ackName, setAckName] = useState('')
   const [showAckInput, setShowAckInput] = useState(false)
   const [acking, setAcking] = useState(false)
+  const [removing, setRemoving] = useState(false)
+  const [confirmRemove, setConfirmRemove] = useState(false)
 
   // Animate progress bar between polls using open_interval_start from server
   useEffect(() => {
@@ -56,6 +59,19 @@ export default function MachineCard({ activity, onAcknowledged }: Props) {
       onAcknowledged(activity.id, name)
     } finally {
       setAcking(false)
+    }
+  }
+
+  async function handleRemove() {
+    setRemoving(true)
+    try {
+      await api.endActivity(activity.id)
+      onRemoved(activity.id)
+    } catch {
+      onRemoved(activity.id)
+    } finally {
+      setRemoving(false)
+      setConfirmRemove(false)
     }
   }
 
@@ -160,10 +176,36 @@ export default function MachineCard({ activity, onAcknowledged }: Props) {
       )}
 
       {isAcknowledged && (
-        <p className="text-xs text-orange-400">
-          Acknowledged by {activity.acknowledged_by} at{' '}
-          {new Date(activity.acknowledged_at!).toLocaleTimeString()}
-        </p>
+        <div className="flex flex-col gap-2">
+          <p className="text-xs text-orange-400">
+            Acknowledged by {activity.acknowledged_by} at{' '}
+            {new Date(activity.acknowledged_at!).toLocaleTimeString()}
+          </p>
+          {!confirmRemove ? (
+            <button
+              onClick={() => setConfirmRemove(true)}
+              className="w-full rounded-xl bg-gray-700 py-2 text-sm font-medium text-gray-300 hover:bg-gray-600"
+            >
+              Remove from Dashboard
+            </button>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={handleRemove}
+                disabled={removing}
+                className="flex-1 rounded-xl bg-red-700 py-2 text-sm font-bold text-white hover:bg-red-600 disabled:opacity-40"
+              >
+                {removing ? 'Removing...' : 'Confirm Remove'}
+              </button>
+              <button
+                onClick={() => setConfirmRemove(false)}
+                className="rounded-xl bg-gray-700 px-4 py-2 text-sm text-gray-300 hover:bg-gray-600"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
       )}
     </div>
   )

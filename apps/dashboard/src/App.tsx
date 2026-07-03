@@ -30,6 +30,10 @@ export default function App() {
     )
   }
 
+  function handleRemoved(id: string) {
+    setActivities((prev) => prev.filter((a) => a.id !== id))
+  }
+
   const grouped = PLANTS.map((plant) => ({
     plant,
     items: filtered.filter((a) => a.plant === plant),
@@ -135,6 +139,7 @@ export default function App() {
                           key={activity.id}
                           activity={activity}
                           onAcknowledged={handleAcknowledged}
+                          onRemoved={handleRemoved}
                         />
                       ))}
                     </div>
