@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plant } from './api.ts'
+import { Plant, api } from './api.ts'
 import { useActiveActivities } from './useActiveActivities.ts'
 import MachineCard from './components/MachineCard.tsx'
 import HistoryView from './components/HistoryView.tsx'
@@ -16,6 +16,8 @@ export default function App() {
   const [plantFilter, setPlantFilter] = useState<Plant | 'ALL'>('ALL')
   const [overdueOnly, setOverdueOnly] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [syncResult, setSyncResult] = useState<string | null>(null)
   const [showExportPicker, setShowExportPicker] = useState(false)
   const [exportFrom, setExportFrom] = useState(() => {
     const d = new Date()
@@ -125,6 +127,29 @@ export default function App() {
                 </div>
               )}
             </div>
+
+            {/* Sync machines/parts from Google Sheet */}
+            <button
+              onClick={async () => {
+                setSyncing(true)
+                setSyncResult(null)
+                try {
+                  const r = await api.triggerSync()
+                  const m = r.machines
+                  setSyncResult(m ? `Synced: ${m.upserted} updated, ${m.removed} deleted, ${m.deactivated} deactivated` : 'Synced')
+                } catch {
+                  setSyncResult('Sync failed')
+                } finally {
+                  setSyncing(false)
+                  setTimeout(() => setSyncResult(null), 5000)
+                }
+              }}
+              disabled={syncing}
+              className="rounded-lg bg-gray-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-600 disabled:opacity-50 whitespace-nowrap"
+            >
+              {syncing ? 'Syncing…' : 'Sync Sheet'}
+            </button>
+            {syncResult && <span className="text-xs text-green-400 whitespace-nowrap">{syncResult}</span>}
 
             {/* Edit Time Study Data */}
             {SHEET_URL && (

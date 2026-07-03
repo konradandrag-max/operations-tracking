@@ -118,6 +118,9 @@ export const api = {
       body: JSON.stringify({ machine_number, dismissed_by }),
     }).then((r) => r.json()),
 
+  triggerSync: (): Promise<{ ok: boolean; machines?: { upserted: number; removed: number; deactivated: number } }> =>
+    fetch(`${BASE}/api/sync`, { method: 'POST' }).then((r) => r.json()),
+
   getDailyDetail: (date?: string, plants?: string[]): Promise<MachineDailyDetail[]> => {
     const qs = new URLSearchParams()
     if (date) qs.set('date', date)
