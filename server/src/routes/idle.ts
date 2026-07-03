@@ -208,7 +208,7 @@ router.get('/', async (_req, res) => {
 
   const activeMachineNos = (
     await prisma.activity.findMany({
-      where: { status: { in: [ActivityStatus.RUNNING, ActivityStatus.PAUSED] } },
+      where: { status: { in: [ActivityStatus.RUNNING, ActivityStatus.PAUSED] }, machine: { active: true } },
       select: { machine_number: true },
       distinct: ['machine_number'],
     })
@@ -219,6 +219,7 @@ router.get('/', async (_req, res) => {
       status: ActivityStatus.ENDED,
       machine_number: { notIn: activeMachineNos },
       ended_at: { not: null },
+      machine: { active: true },
     },
     orderBy: { ended_at: 'desc' },
     distinct: ['machine_number'],
