@@ -30,8 +30,11 @@ router.get('/active', async (_req, res) => {
         ? act.item_master.standard_setup_time_sec
         : act.item_master.standard_cycle_time_sec
 
-    const elapsedSec = computeElapsedSec(act.intervals, now)
-    const progressPct = computeProgressPct(elapsedSec, standardSec)
+    // elapsed_sec includes only CLOSED intervals — client adds the open interval live
+    const closedIntervals = act.intervals.filter((iv) => iv.interval_end !== null)
+    const elapsedSec = computeElapsedSec(closedIntervals, now)
+    const fullElapsedSec = computeElapsedSec(act.intervals, now)
+    const progressPct = computeProgressPct(fullElapsedSec, standardSec)
     const isOverdue = progressPct >= 100
 
     if (isOverdue && !act.overdue_flag) {
@@ -49,7 +52,7 @@ router.get('/active', async (_req, res) => {
       activity_type: act.activity_type,
       status: act.status,
       started_at: act.started_at,
-      elapsed_sec: elapsedSec,
+      elapsed_sec: elapsedSec, // closed intervals only — client adds open interval
       standard_sec: standardSec,
       progress_pct: progressPct,
       overdue_flag: isOverdue || act.overdue_flag,
