@@ -6,6 +6,7 @@ import HistoryView from './components/HistoryView.tsx'
 
 type Tab = 'live' | 'history'
 const PLANTS: Plant[] = ['KSB2', 'KSB6', 'KSB7']
+const SHEET_URL = import.meta.env.VITE_SHEET_URL ?? ''
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('live')
@@ -47,6 +48,16 @@ export default function App() {
             )}
           </div>
           <div className="flex items-center gap-4">
+            {SHEET_URL && (
+              <a
+                href={SHEET_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-600"
+              >
+                Edit Time Study Data
+              </a>
+            )}
             {lastUpdated && !error && (
               <p className="text-xs text-gray-500">
                 Updated {lastUpdated.toLocaleTimeString()}

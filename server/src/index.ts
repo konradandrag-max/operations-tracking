@@ -6,6 +6,8 @@ import rateLimit from 'express-rate-limit'
 import machinesRouter from './routes/machines.js'
 import itemMasterRouter from './routes/itemMaster.js'
 import activitiesRouter from './routes/activities.js'
+import syncRouter from './routes/sync.js'
+import cronRouter from './routes/cron.js'
 
 const app = express()
 const PORT = process.env.PORT ?? 3001
@@ -26,6 +28,8 @@ app.get('/health', (_req, res) => res.json({ ok: true }))
 app.use('/api/machines', machinesRouter)
 app.use('/api/item-master', itemMasterRouter)
 app.use('/api/activities', activitiesRouter)
+app.use('/api/sync', syncRouter)
+app.use('/api/cron/sync', cronRouter)
 
 app.use((_req, res) => res.status(404).json({ error: 'Not found' }))
 
