@@ -151,7 +151,7 @@ export default function TrackingScreen({ machine, itemMaster, onNewPart, onChang
   const isOverdue = elapsedSec > standardSec && standardSec > 0
 
   return (
-    <div className="flex min-h-screen flex-col px-4 py-6 gap-4">
+    <div className="flex min-h-screen flex-col px-4 py-6 pb-16 gap-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -196,17 +196,17 @@ export default function TrackingScreen({ machine, itemMaster, onNewPart, onChang
       </div>
 
       {/* Progress bar + timer */}
-      <div className={`rounded-2xl p-6 ${isOverdue ? 'bg-red-900/40 border border-red-700' : 'bg-gray-800'}`}>
+      <div className={`rounded-2xl p-5 ${isOverdue ? 'bg-red-900/40 border border-red-700' : 'bg-gray-800'}`}>
         <div className="flex justify-between items-end mb-3">
           <div>
             <p className="text-xs uppercase tracking-wider text-gray-500">Elapsed</p>
-            <p className={`text-5xl font-mono font-bold ${isOverdue ? 'text-red-400' : 'text-white'}`}>
+            <p className={`text-4xl sm:text-5xl font-mono font-bold ${isOverdue ? 'text-red-400' : 'text-white'}`}>
               {formatSec(elapsedSec)}
             </p>
           </div>
           <div className="text-right">
             <p className="text-xs uppercase tracking-wider text-gray-500">Standard</p>
-            <p className="text-2xl font-mono text-gray-400">{formatSec(standardSec)}</p>
+            <p className="text-xl sm:text-2xl font-mono text-gray-400">{formatSec(standardSec)}</p>
           </div>
         </div>
         <div className="h-5 w-full rounded-full bg-gray-700 overflow-hidden">

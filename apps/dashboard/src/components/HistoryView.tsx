@@ -39,7 +39,7 @@ export default function HistoryView() {
       <h2 className="text-xl font-bold text-white">Activity History</h2>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 items-end">
+      <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 items-end">
         <div className="flex flex-col gap-1">
           <label className="text-xs text-gray-400 uppercase">Plant</label>
           <select

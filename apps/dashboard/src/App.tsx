@@ -52,27 +52,37 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Top nav */}
-      <header className="sticky top-0 z-10 bg-gray-950 border-b border-gray-800 px-6 py-4">
-        <div className="flex items-center justify-between max-w-screen-2xl mx-auto">
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-bold text-white">Production Dashboard</h1>
+      <header className="sticky top-0 z-10 bg-gray-950 border-b border-gray-800 px-4 md:px-6 py-3">
+        <div className="max-w-screen-2xl mx-auto flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          {/* Left: title + overdue badge */}
+          <div className="flex items-center gap-3">
+            <h1 className="text-lg font-bold text-white">Production Dashboard</h1>
             {overdueCount > 0 && (
-              <span className="rounded-full bg-red-600 px-3 py-0.5 text-sm font-bold text-white animate-pulse">
+              <span className="rounded-full bg-red-600 px-2.5 py-0.5 text-xs font-bold text-white animate-pulse">
                 {overdueCount} OVERDUE
               </span>
             )}
+            {lastUpdated && !error && (
+              <span className="hidden sm:inline text-xs text-gray-500">
+                {lastUpdated.toLocaleTimeString()}
+              </span>
+            )}
+            {error && <span className="text-xs text-red-400">{error}</span>}
           </div>
-          <div className="flex items-center gap-4">
+
+          {/* Right: actions + tabs */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Export CSV */}
             <div className="relative">
               <button
                 onClick={() => setShowExportPicker((v) => !v)}
-                className="rounded-lg bg-indigo-700 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-600"
+                className="rounded-lg bg-indigo-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-600"
               >
-                Export CSV
+                {exporting ? 'Exporting…' : 'Export CSV'}
               </button>
               {showExportPicker && (
-                <div className="absolute right-0 top-11 z-20 bg-gray-800 border border-gray-700 rounded-xl p-4 shadow-xl flex flex-col gap-3 min-w-[240px]">
-                  <p className="text-sm font-semibold text-white">Select date range</p>
+                <div className="absolute right-0 top-10 z-20 bg-gray-800 border border-gray-700 rounded-xl p-4 shadow-xl flex flex-col gap-3 w-56">
+                  <p className="text-sm font-semibold text-white">Date range</p>
                   <div className="flex flex-col gap-1">
                     <label className="text-xs text-gray-400">From</label>
                     <input
@@ -107,39 +117,35 @@ export default function App() {
                     disabled={exporting || !exportFrom || !exportTo}
                     className="rounded-lg bg-indigo-600 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
                   >
-                    {exporting ? 'Exporting...' : 'Download CSV'}
+                    Download CSV
                   </button>
                 </div>
               )}
             </div>
+
+            {/* Edit Time Study Data */}
             {SHEET_URL && (
               <a
                 href={SHEET_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-600"
+                className="rounded-lg bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-600 whitespace-nowrap"
               >
-                Edit Time Study Data
+                Time Study
               </a>
             )}
-            {lastUpdated && !error && (
-              <p className="text-xs text-gray-500">
-                Updated {lastUpdated.toLocaleTimeString()}
-              </p>
-            )}
-            {error && (
-              <p className="text-xs text-red-400">{error}</p>
-            )}
+
+            {/* Live / History tabs */}
             <div className="flex rounded-lg bg-gray-800 p-1">
               <button
                 onClick={() => setTab('live')}
-                className={`px-4 py-1.5 rounded text-sm font-medium transition-colors ${tab === 'live' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${tab === 'live' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
               >
                 Live
               </button>
               <button
                 onClick={() => setTab('history')}
-                className={`px-4 py-1.5 rounded text-sm font-medium transition-colors ${tab === 'history' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${tab === 'history' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
               >
                 History
               </button>
@@ -148,16 +154,16 @@ export default function App() {
         </div>
       </header>
 
-      <main className="max-w-screen-2xl mx-auto px-6 py-6">
+      <main className="max-w-screen-2xl mx-auto px-4 md:px-6 py-4 md:py-6 pb-10">
         {tab === 'live' && (
           <>
             {/* Filters */}
-            <div className="flex flex-wrap gap-2 mb-6">
+            <div className="flex flex-wrap gap-2 mb-4">
               <button
                 onClick={() => setPlantFilter('ALL')}
-                className={`rounded-lg px-4 py-2 text-sm font-medium ${plantFilter === 'ALL' ? 'bg-white text-gray-900' : 'bg-gray-800 text-gray-400 hover:text-white'}`}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium ${plantFilter === 'ALL' ? 'bg-white text-gray-900' : 'bg-gray-800 text-gray-400 hover:text-white'}`}
               >
-                All Plants ({activities.length})
+                All ({activities.length})
               </button>
               {PLANTS.map((p) => {
                 const count = activities.filter((a) => a.plant === p).length
@@ -165,7 +171,7 @@ export default function App() {
                   <button
                     key={p}
                     onClick={() => setPlantFilter(p)}
-                    className={`rounded-lg px-4 py-2 text-sm font-medium ${plantFilter === p ? 'bg-white text-gray-900' : 'bg-gray-800 text-gray-400 hover:text-white'}`}
+                    className={`rounded-lg px-3 py-1.5 text-sm font-medium ${plantFilter === p ? 'bg-white text-gray-900' : 'bg-gray-800 text-gray-400 hover:text-white'}`}
                   >
                     {p} ({count})
                   </button>
@@ -173,7 +179,7 @@ export default function App() {
               })}
               <button
                 onClick={() => setOverdueOnly((v) => !v)}
-                className={`rounded-lg px-4 py-2 text-sm font-medium ${overdueOnly ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'}`}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium ${overdueOnly ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'}`}
               >
                 Overdue ({overdueCount})
               </button>
@@ -186,13 +192,13 @@ export default function App() {
                 <p className="text-sm mt-1">Activities will appear here as operators start jobs</p>
               </div>
             ) : (
-              <div className="space-y-8">
+              <div className="space-y-6">
                 {grouped.map(({ plant, items }) => (
                   <section key={plant}>
-                    <h2 className="text-lg font-bold text-gray-400 uppercase tracking-widest mb-4">
+                    <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3">
                       {plant} — {items.length} machine{items.length !== 1 ? 's' : ''}
                     </h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                       {items.map((activity) => (
                         <MachineCard
                           key={activity.id}

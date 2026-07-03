@@ -52,7 +52,7 @@ export default function App() {
           onChangeMachine={handleNewMachine}
         />
       )}
-      <footer className="fixed bottom-0 left-0 right-0 text-center text-xs text-gray-600 py-1 bg-gray-900">
+      <footer className="fixed bottom-0 left-0 right-0 text-center text-xs text-gray-600 py-1 bg-gray-900 z-10">
         &copy; {new Date().getFullYear()} Konrad Andrag
       </footer>
     </div>
