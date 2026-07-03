@@ -3,10 +3,12 @@ import { prisma } from '../lib/prisma.js'
 
 const router = Router()
 
-const SHEET_ID = process.env.GOOGLE_SHEET_ID
+const MACHINES_SHEET_ID = process.env.GOOGLE_MACHINES_SHEET_ID ?? process.env.GOOGLE_SHEET_ID
+const PARTS_SHEET_ID = process.env.GOOGLE_PARTS_SHEET_ID ?? process.env.GOOGLE_SHEET_ID
 
-function sheetCsvUrl(sheetName: string) {
-  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`
+function sheetCsvUrl(sheetId: string, sheetName?: string) {
+  const base = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv`
+  return sheetName ? `${base}&sheet=${encodeURIComponent(sheetName)}` : base
 }
 
 function parseCsv(text: string): string[][] {
@@ -28,7 +30,7 @@ function toSeconds(hours: string, minutes: string): number {
 }
 
 router.post('/', async (_req, res) => {
-  if (!SHEET_ID) {
+  if (!MACHINES_SHEET_ID && !PARTS_SHEET_ID) {
     return res.status(503).json({ error: 'GOOGLE_SHEET_ID not configured' })
   }
 
@@ -36,7 +38,8 @@ router.post('/', async (_req, res) => {
 
   // Sync machines
   try {
-    const response = await fetch(sheetCsvUrl('Machines'))
+    if (!MACHINES_SHEET_ID) throw new Error('GOOGLE_MACHINES_SHEET_ID not configured')
+    const response = await fetch(sheetCsvUrl(MACHINES_SHEET_ID))
     if (!response.ok) throw new Error(`Failed to fetch Machines sheet: ${response.status}`)
     const rows = parseCsv(await response.text()).slice(1) // skip header
 
@@ -63,7 +66,8 @@ router.post('/', async (_req, res) => {
 
   // Sync parts
   try {
-    const response = await fetch(sheetCsvUrl('Parts'))
+    if (!PARTS_SHEET_ID) throw new Error('GOOGLE_PARTS_SHEET_ID not configured')
+    const response = await fetch(sheetCsvUrl(PARTS_SHEET_ID))
     if (!response.ok) throw new Error(`Failed to fetch Parts sheet: ${response.status}`)
     const rows = parseCsv(await response.text()).slice(1) // skip header
 
