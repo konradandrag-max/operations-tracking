@@ -120,9 +120,14 @@ export default function TrackingScreen({ machine, itemMaster, onNewPart, onChang
       openIntervalStartRef.current = null
       setActivity({ ...activity, status: 'PAUSED' })
     } catch (err) {
-      // Queue the stop for when connectivity returns
-      enqueue(() => api.stopActivity(activity.id))
-      setError('Network issue — will retry automatically')
+      const msg = err instanceof Error ? err.message : String(err)
+      const isNetworkErr = msg === 'Failed to fetch' || msg.includes('NetworkError') || msg.includes('network')
+      if (isNetworkErr) {
+        enqueue(() => api.stopActivity(activity.id))
+        setError('Network issue — will retry automatically')
+      } else {
+        setError(`Could not stop: ${msg}`)
+      }
     } finally {
       setLoading(false)
     }
@@ -141,8 +146,17 @@ export default function TrackingScreen({ machine, itemMaster, onNewPart, onChang
       openIntervalStartRef.current = null
       setActivity({ ...activity, status: 'ENDED' })
     } catch (err) {
-      enqueue(() => api.endActivity(activity.id))
-      setError('Network issue — will retry automatically')
+      const msg = err instanceof Error ? err.message : String(err)
+      if (msg.toLowerCase().includes('already ended')) {
+        // Server already ended it (queued retry got through) — sync local state
+        openIntervalStartRef.current = null
+        setActivity({ ...activity, status: 'ENDED' })
+      } else if (msg === 'Failed to fetch' || msg.includes('NetworkError') || msg.includes('network')) {
+        enqueue(() => api.endActivity(activity.id))
+        setError('Network issue — will retry automatically')
+      } else {
+        setError(`Could not end activity: ${msg}`)
+      }
     } finally {
       setLoading(false)
     }
