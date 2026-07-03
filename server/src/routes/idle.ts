@@ -45,9 +45,9 @@ router.post('/dismiss', async (req, res) => {
 // Returns ALL registered machines in the given plant(s), idle counted from 6am
 router.get('/daily-detail', async (req, res) => {
   const dateStr     = (req.query.date   as string) || todayDateStr()
-  const plantsParam = (req.query.plants as string) || 'KSB2,KSB6'
+  const plantsParam = (req.query.plants as string) || ''
 
-  const plantList  = plantsParam.split(',').map((p) => p.trim()).filter(Boolean) as Plant[]
+  const plantList  = plantsParam ? plantsParam.split(',').map((p) => p.trim()).filter(Boolean) as Plant[] : []
   const targetDate = new Date(dateStr + 'T00:00:00')
   const dayStart   = new Date(dateStr + 'T00:00:00.000')
   const dayEnd     = new Date(dateStr + 'T23:59:59.999')
@@ -58,9 +58,9 @@ router.get('/daily-detail', async (req, res) => {
   const ws = new Date(targetDate); ws.setHours(WORK_START_H, 0, 0, 0)
   const we = new Date(targetDate); we.setHours(WORK_END_H,   WORK_END_M, 0, 0)
 
-  // All registered machines in the requested plants
+  // All registered machines in the requested plants (including inactive — just not yet used)
   const allMachines = await prisma.machine.findMany({
-    where: { active: true, ...(plantList.length > 0 ? { plant: { in: plantList } } : {}) },
+    where: { ...(plantList.length > 0 ? { plant: { in: plantList } } : {}) },
     orderBy: { machine_number: 'asc' },
   })
 

@@ -20,16 +20,18 @@ const PLANT_COLORS: Record<string, string> = { KSB2: 'bg-blue-600', KSB6: 'bg-pu
 
 export default function IdleTimesView() {
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
-  // Default: KSB2 + KSB6
-  const [selectedPlants, setSelectedPlants] = useState<Set<Plant>>(new Set(['KSB2', 'KSB6']))
+  // Default: all plants
+  const [selectedPlants, setSelectedPlants] = useState<Set<Plant>>(new Set(['KSB2', 'KSB6', 'KSB7']))
   const [data, setData] = useState<MachineDailyDetail[]>([])
   const [loading, setLoading] = useState(false)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     setLoading(true)
+    // Pass selected plants; if all 3 selected, pass none (server returns everything)
     const plants = [...selectedPlants]
-    api.getDailyDetail(date, plants.length > 0 ? plants : undefined)
+    const plantsArg = plants.length === ALL_PLANTS.length ? undefined : plants
+    api.getDailyDetail(date, plantsArg)
       .then((d) => Array.isArray(d) ? setData(d) : setData([]))
       .catch(() => setData([]))
       .finally(() => setLoading(false))
@@ -137,9 +139,7 @@ export default function IdleTimesView() {
       )}
 
       {!loading && data.length === 0 && (
-        <p className="text-center text-gray-500 py-12">
-          {selectedPlants.size === 0 ? 'Select a plant to load machines.' : 'No machines found for the selected plants.'}
-        </p>
+        <p className="text-center text-gray-500 py-12">No machines found.</p>
       )}
     </div>
   )
