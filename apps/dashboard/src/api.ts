@@ -75,6 +75,7 @@ export interface MachineDailyDetail {
   total_working_idle_sec: number
   flagged: boolean
   is_currently_idle: boolean
+  has_no_activity: boolean
   timeline: IdleTimelineEntry[]
 }
 
@@ -117,10 +118,10 @@ export const api = {
       body: JSON.stringify({ machine_number, dismissed_by }),
     }).then((r) => r.json()),
 
-  getDailyDetail: (date?: string, plant?: string): Promise<MachineDailyDetail[]> => {
+  getDailyDetail: (date?: string, plants?: string[]): Promise<MachineDailyDetail[]> => {
     const qs = new URLSearchParams()
     if (date) qs.set('date', date)
-    if (plant && plant !== 'ALL') qs.set('plant', plant)
+    if (plants && plants.length > 0) qs.set('plants', plants.join(','))
     return fetch(`${BASE}/api/idle/daily-detail?${qs}`).then((r) => r.json())
   },
 

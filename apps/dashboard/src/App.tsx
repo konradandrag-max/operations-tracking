@@ -259,7 +259,7 @@ export default function App() {
 
         {tab === 'history' && <HistoryView />}
 
-        {tab === 'idle-times' && <IdleTimesView defaultPlant={plantFilter} />}
+        {tab === 'idle-times' && <IdleTimesView />}
       </main>
       <footer className="text-center text-xs text-gray-700 py-2">
         &copy; {new Date().getFullYear()} Konrad Andrag
