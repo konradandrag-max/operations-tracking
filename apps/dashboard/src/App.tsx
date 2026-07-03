@@ -25,9 +25,16 @@ export default function App() {
   })
   const [exportTo, setExportTo] = useState(() => new Date().toISOString().slice(0, 10))
   const { activities, lastUpdated, error, setActivities } = useActiveActivities()
-  const { machines: idleMachines, refresh: refreshIdle } = useIdleMachines()
+  const { machines: idleMachinesAll, refresh: refreshIdle } = useIdleMachines()
+  const [dismissedIdleSet, setDismissedIdleSet] = useState<Set<string>>(new Set())
 
-  function handleIdleDismissed(_machine_number: string, _by: string) {
+  // When a machine starts a new job it leaves the idle list — clear stale dismissals automatically
+  const currentIdleNos = new Set(idleMachinesAll.map((m) => m.machine_number))
+  const activeDismissed = new Set([...dismissedIdleSet].filter((n) => currentIdleNos.has(n)))
+  const idleMachines = idleMachinesAll.filter((m) => !activeDismissed.has(m.machine_number))
+
+  function handleIdleDismissed(machine_number: string, _by: string) {
+    setDismissedIdleSet((prev) => new Set([...prev, machine_number]))
     refreshIdle()
   }
 
@@ -227,6 +234,9 @@ export default function App() {
           <section className="mt-8">
             <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3">
               Idle Machines — {idleMachines.length} between jobs
+              {activeDismissed.size > 0 && (
+                <span className="ml-2 font-normal text-gray-600">({activeDismissed.size} dismissed)</span>
+              )}
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {idleMachines
