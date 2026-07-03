@@ -294,17 +294,15 @@ export default function TrackingScreen({ machine, itemMaster, onNewPart, onChang
         )}
       </div>
 
-      {/* New part / ended state */}
-      {isEnded && (
+      {/* New Part button — always shown, style depends on state */}
+      {(!activity || isEnded) ? (
         <button
           onClick={onNewPart}
           className="w-full rounded-2xl bg-blue-600 py-6 text-2xl font-bold text-white active:bg-blue-700"
         >
           New Part
         </button>
-      )}
-
-      {activity && !isEnded && (
+      ) : (
         <button
           onClick={onNewPart}
           className="w-full rounded-xl border border-gray-600 py-4 text-lg text-gray-400 active:bg-gray-800"

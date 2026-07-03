@@ -25,7 +25,11 @@ export default function App() {
   })
   const [exportTo, setExportTo] = useState(() => new Date().toISOString().slice(0, 10))
   const { activities, lastUpdated, error, setActivities } = useActiveActivities()
-  const idleMachines = useIdleMachines()
+  const { machines: idleMachines, refresh: refreshIdle } = useIdleMachines()
+
+  function handleIdleDismissed(_machine_number: string, _by: string) {
+    refreshIdle()
+  }
 
   const overdueCount = activities.filter((a) => a.overdue_flag && !a.acknowledged_at).length
 
@@ -228,7 +232,7 @@ export default function App() {
               {idleMachines
                 .sort((a, b) => b.idle_sec - a.idle_sec)
                 .map((m) => (
-                  <IdleCard key={m.machine_number} machine={m} />
+                  <IdleCard key={m.machine_number} machine={m} onDismissed={handleIdleDismissed} />
                 ))}
             </div>
           </section>

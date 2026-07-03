@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { api, IdleMachine } from './api.ts'
 
 export function useIdleMachines() {
@@ -6,26 +6,30 @@ export function useIdleMachines() {
   const [, setTick] = useState(0)
   const fetchedAt = useRef<Date | null>(null)
 
-  useEffect(() => {
-    const fetch = () =>
-      api.getIdle().then((data) => {
+  const refresh = useCallback(() =>
+    api.getIdle().then((data) => {
+      if (Array.isArray(data)) {
         fetchedAt.current = new Date()
         setMachines(data)
-      }).catch(() => {})
+      }
+    }).catch(() => {}),
+  [])
 
-    fetch()
-    const poll = setInterval(fetch, 10000)
-    // Re-render every 30s so idle times update without re-fetching
+  useEffect(() => {
+    refresh()
+    const poll = setInterval(refresh, 10000)
     const tick = setInterval(() => setTick((t) => t + 1), 30000)
     return () => { clearInterval(poll); clearInterval(tick) }
-  }, [])
+  }, [refresh])
 
-  // Compute live idle_sec by adding elapsed time since last fetch
-  const now = Date.now()
-  const offsetMs = fetchedAt.current ? now - fetchedAt.current.getTime() : 0
+  const offsetSec = fetchedAt.current ? Math.floor((Date.now() - fetchedAt.current.getTime()) / 1000) : 0
 
-  return machines.map((m) => ({
+  const live = machines.map((m) => ({
     ...m,
-    idle_sec: m.idle_sec + Math.floor(offsetMs / 1000),
+    idle_sec: m.idle_sec + offsetSec,
+    today_idle_sec: m.today_idle_sec + offsetSec,
+    today_idle_flagged: m.today_idle_flagged || (m.today_idle_sec + offsetSec) > 90 * 60,
   }))
+
+  return { machines: live, refresh }
 }

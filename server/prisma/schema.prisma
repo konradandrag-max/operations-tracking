@@ -67,6 +67,17 @@ model Activity {
   @@map("activities")
 }
 
+model DailyIdleDismissal {
+  id             String   @id @default(cuid())
+  machine_number String
+  date           String   // YYYY-MM-DD
+  dismissed_by   String
+  dismissed_at   DateTime @default(now())
+
+  @@unique([machine_number, date])
+  @@map("daily_idle_dismissals")
+}
+
 model ActivityInterval {
   id             String    @id @default(cuid())
   activity_id    String

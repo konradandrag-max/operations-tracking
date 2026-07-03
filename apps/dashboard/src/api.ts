@@ -23,6 +23,8 @@ export interface ActiveActivity {
   acknowledged_at: string | null
   open_interval_start: string | null
   idle_before_start_sec: number | null
+  today_idle_sec: number
+  today_idle_flagged: boolean
 }
 
 export interface IdleMachine {
@@ -34,6 +36,10 @@ export interface IdleMachine {
   last_activity_type: ActivityType
   last_ended_at: string
   idle_sec: number
+  today_idle_sec: number
+  today_idle_flagged: boolean
+  daily_idle_dismissed_by: string | null
+  daily_idle_dismissed_at: string | null
 }
 
 export interface HistoryActivity {
@@ -67,6 +73,13 @@ export const api = {
 
   getIdle: (): Promise<IdleMachine[]> =>
     fetch(`${BASE}/api/idle`).then((r) => r.json()),
+
+  dismissDailyIdle: (machine_number: string, dismissed_by: string): Promise<{ ok: boolean }> =>
+    fetch(`${BASE}/api/idle/dismiss`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ machine_number, dismissed_by }),
+    }).then((r) => r.json()),
 
   getHistory: (params?: { plant?: string; machine_number?: string; from?: string; to?: string }): Promise<HistoryActivity[]> => {
     const qs = new URLSearchParams()

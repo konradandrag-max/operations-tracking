@@ -7,8 +7,22 @@ const router = Router()
 
 // GET /api/activities/active — polled by dashboard every 5 seconds
 // NOTE: Socket.io is a drop-in upgrade path if 5-second polling proves too slow.
+const DAILY_IDLE_LIMIT_SEC = 90 * 60 // 1.5 hours
+
 router.get('/active', async (_req, res) => {
   const now = new Date()
+
+  // Today's idle totals per machine
+  const todayStart = new Date(now)
+  todayStart.setHours(0, 0, 0, 0)
+  const todayIdleRows = await prisma.activity.groupBy({
+    by: ['machine_number'],
+    where: { started_at: { gte: todayStart }, idle_before_start_sec: { not: null } },
+    _sum: { idle_before_start_sec: true },
+  })
+  const todayIdleMap = new Map(
+    todayIdleRows.map((r) => [r.machine_number, r._sum.idle_before_start_sec ?? 0])
+  )
 
   const activities = await prisma.activity.findMany({
     where: {
@@ -61,6 +75,8 @@ router.get('/active', async (_req, res) => {
       // Open interval start lets the client animate the progress bar between polls
       open_interval_start: act.intervals.find((iv) => !iv.interval_end)?.interval_start ?? null,
       idle_before_start_sec: act.idle_before_start_sec,
+      today_idle_sec: todayIdleMap.get(act.machine_number) ?? 0,
+      today_idle_flagged: (todayIdleMap.get(act.machine_number) ?? 0) > DAILY_IDLE_LIMIT_SEC,
     }
   })
 

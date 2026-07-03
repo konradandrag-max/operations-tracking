@@ -175,6 +175,13 @@ export default function MachineCard({ activity, onAcknowledged, onRemoved }: Pro
         </div>
       )}
 
+      {/* Daily idle warning badge on active machines */}
+      {activity.today_idle_flagged && (
+        <div className="rounded-xl bg-red-900/50 border border-red-700 px-3 py-1.5 text-xs text-red-400 font-medium">
+          Daily idle exceeded: {Math.floor((activity.today_idle_sec ?? 0) / 60)}m today (limit 90m)
+        </div>
+      )}
+
       {isAcknowledged && (
         <div className="flex flex-col gap-2">
           <p className="text-xs text-orange-400">
