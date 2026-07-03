@@ -11,13 +11,14 @@ const SHEET_URL = import.meta.env.VITE_SHEET_URL ?? ''
 export default function App() {
   const [tab, setTab] = useState<Tab>('live')
   const [plantFilter, setPlantFilter] = useState<Plant | 'ALL'>('ALL')
+  const [overdueOnly, setOverdueOnly] = useState(false)
   const { activities, lastUpdated, error, setActivities } = useActiveActivities()
 
-  const filtered = plantFilter === 'ALL'
-    ? activities
-    : activities.filter((a) => a.plant === plantFilter)
-
   const overdueCount = activities.filter((a) => a.overdue_flag && !a.acknowledged_at).length
+
+  const filtered = activities
+    .filter((a) => plantFilter === 'ALL' || a.plant === plantFilter)
+    .filter((a) => !overdueOnly || a.overdue_flag)
 
   function handleAcknowledged(id: string, by: string) {
     setActivities((prev) =>
@@ -87,8 +88,8 @@ export default function App() {
       <main className="max-w-screen-2xl mx-auto px-6 py-6">
         {tab === 'live' && (
           <>
-            {/* Plant filter */}
-            <div className="flex gap-2 mb-6">
+            {/* Filters */}
+            <div className="flex flex-wrap gap-2 mb-6">
               <button
                 onClick={() => setPlantFilter('ALL')}
                 className={`rounded-lg px-4 py-2 text-sm font-medium ${plantFilter === 'ALL' ? 'bg-white text-gray-900' : 'bg-gray-800 text-gray-400 hover:text-white'}`}
@@ -107,6 +108,12 @@ export default function App() {
                   </button>
                 )
               })}
+              <button
+                onClick={() => setOverdueOnly((v) => !v)}
+                className={`rounded-lg px-4 py-2 text-sm font-medium ${overdueOnly ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'}`}
+              >
+                Overdue ({overdueCount})
+              </button>
             </div>
 
             {filtered.length === 0 ? (
