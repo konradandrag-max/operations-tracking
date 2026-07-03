@@ -8,6 +8,7 @@ import itemMasterRouter from './routes/itemMaster.js'
 import activitiesRouter from './routes/activities.js'
 import syncRouter from './routes/sync.js'
 import cronRouter from './routes/cron.js'
+import idleRouter from './routes/idle.js'
 
 const app = express()
 const PORT = process.env.PORT ?? 3001
@@ -30,6 +31,7 @@ app.use('/api/item-master', itemMasterRouter)
 app.use('/api/activities', activitiesRouter)
 app.use('/api/sync', syncRouter)
 app.use('/api/cron/sync', cronRouter)
+app.use('/api/idle', idleRouter)
 
 app.use((_req, res) => res.status(404).json({ error: 'Not found' }))
 

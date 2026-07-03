@@ -52,6 +52,7 @@ export async function exportWeeklyCsv(from?: string, to?: string) {
     'No. of Cycles',
     'Avg Cycle Variance',
     'Activities >10% Variance',
+    'Avg Idle Before Start (min)',
     'Reason for Variance',
   ]
 
@@ -63,6 +64,11 @@ export async function exportWeeklyCsv(from?: string, to?: string) {
       (a) => a.standard_sec > 0 && Math.abs(a.variance_sec) / a.standard_sec > 0.1
     ).length
 
+    const idleValues = allActs
+      .map((a) => (a as any).idle_before_start_sec)
+      .filter((v): v is number => v !== null && v !== undefined)
+    const avgIdleMin = idleValues.length ? Math.round(avg(idleValues) / 60) : null
+
     rows.push([
       g.part,
       g.machine,
@@ -71,6 +77,7 @@ export async function exportWeeklyCsv(from?: string, to?: string) {
       String(g.cycles.length),
       g.cycles.length ? fmtMin(avg(g.cycles.map((a) => a.variance_sec))) : '-',
       String(over10pct),
+      avgIdleMin !== null ? `${avgIdleMin} min` : '-',
       '', // reason — empty for engineer/supervisor
     ])
   }

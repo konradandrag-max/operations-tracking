@@ -22,6 +22,18 @@ export interface ActiveActivity {
   acknowledged_by: string | null
   acknowledged_at: string | null
   open_interval_start: string | null
+  idle_before_start_sec: number | null
+}
+
+export interface IdleMachine {
+  machine_number: string
+  plant: Plant
+  machine_description: string | null
+  last_item_master_no: string
+  last_part_description: string
+  last_activity_type: ActivityType
+  last_ended_at: string
+  idle_sec: number
 }
 
 export interface HistoryActivity {
@@ -52,6 +64,9 @@ export const api = {
 
   endActivity: (id: string): Promise<{ ok: boolean }> =>
     fetch(`${BASE}/api/activities/${id}/end`, { method: 'POST' }).then((r) => r.json()),
+
+  getIdle: (): Promise<IdleMachine[]> =>
+    fetch(`${BASE}/api/idle`).then((r) => r.json()),
 
   getHistory: (params?: { plant?: string; machine_number?: string; from?: string; to?: string }): Promise<HistoryActivity[]> => {
     const qs = new URLSearchParams()

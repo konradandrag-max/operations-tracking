@@ -60,6 +60,7 @@ router.get('/active', async (_req, res) => {
       acknowledged_at: act.acknowledged_at,
       // Open interval start lets the client animate the progress bar between polls
       open_interval_start: act.intervals.find((iv) => !iv.interval_end)?.interval_start ?? null,
+      idle_before_start_sec: act.idle_before_start_sec,
     }
   })
 
@@ -99,6 +100,16 @@ router.post('/', async (req, res) => {
 
   const now = new Date()
 
+  // Calculate idle time since last job ended on this machine
+  const lastEnded = await prisma.activity.findFirst({
+    where: { machine_number: machine_number.toUpperCase(), status: ActivityStatus.ENDED },
+    orderBy: { ended_at: 'desc' },
+    select: { ended_at: true },
+  })
+  const idle_before_start_sec = lastEnded?.ended_at
+    ? Math.floor((now.getTime() - lastEnded.ended_at.getTime()) / 1000)
+    : null
+
   const activity = await prisma.activity.create({
     data: {
       machine_number: machine_number.toUpperCase(),
@@ -106,6 +117,7 @@ router.post('/', async (req, res) => {
       activity_type,
       status: ActivityStatus.RUNNING,
       started_at: now,
+      idle_before_start_sec,
       intervals: {
         create: { interval_start: now },
       },
@@ -289,6 +301,7 @@ router.get('/history', async (req, res) => {
       elapsed_sec: elapsedSec,
       standard_sec: standardSec,
       variance_sec: elapsedSec - standardSec,
+      idle_before_start_sec: act.idle_before_start_sec,
     }
   })
 

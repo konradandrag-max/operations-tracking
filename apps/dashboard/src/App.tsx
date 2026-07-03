@@ -4,6 +4,8 @@ import { useActiveActivities } from './useActiveActivities.ts'
 import MachineCard from './components/MachineCard.tsx'
 import HistoryView from './components/HistoryView.tsx'
 import { exportWeeklyCsv } from './lib/exportWeeklyCsv.ts'
+import { useIdleMachines } from './useIdleMachines.ts'
+import IdleCard from './components/IdleCard.tsx'
 
 type Tab = 'live' | 'history'
 const PLANTS: Plant[] = ['KSB2', 'KSB6', 'KSB7']
@@ -23,6 +25,7 @@ export default function App() {
   })
   const [exportTo, setExportTo] = useState(() => new Date().toISOString().slice(0, 10))
   const { activities, lastUpdated, error, setActivities } = useActiveActivities()
+  const idleMachines = useIdleMachines()
 
   const overdueCount = activities.filter((a) => a.overdue_flag && !a.acknowledged_at).length
 
@@ -213,6 +216,22 @@ export default function App() {
               </div>
             )}
           </>
+        )}
+
+        {/* Idle machines section */}
+        {tab === 'live' && idleMachines.length > 0 && (
+          <section className="mt-8">
+            <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3">
+              Idle Machines — {idleMachines.length} between jobs
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {idleMachines
+                .sort((a, b) => b.idle_sec - a.idle_sec)
+                .map((m) => (
+                  <IdleCard key={m.machine_number} machine={m} />
+                ))}
+            </div>
+          </section>
         )}
 
         {tab === 'history' && <HistoryView />}

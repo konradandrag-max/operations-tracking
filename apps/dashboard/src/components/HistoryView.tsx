@@ -93,6 +93,7 @@ export default function HistoryView() {
               <th className="px-4 py-3">Elapsed</th>
               <th className="px-4 py-3">Standard</th>
               <th className="px-4 py-3">Variance</th>
+              <th className="px-4 py-3">Idle Before</th>
               <th className="px-4 py-3">Ended</th>
             </tr>
           </thead>
@@ -126,6 +127,15 @@ export default function HistoryView() {
                 }`}>
                   {row.variance_sec > 0 ? '+' : ''}{formatSec(Math.abs(row.variance_sec))}
                   {row.variance_sec > 0 ? ' over' : ' under'}
+                </td>
+                <td className={`px-4 py-3 text-sm font-mono ${
+                  (row as any).idle_before_start_sec >= 2700 ? 'text-red-400' :
+                  (row as any).idle_before_start_sec >= 1800 ? 'text-orange-400' :
+                  (row as any).idle_before_start_sec >= 900 ? 'text-yellow-400' : 'text-gray-400'
+                }`}>
+                  {(row as any).idle_before_start_sec != null
+                    ? `${Math.round((row as any).idle_before_start_sec / 60)} min`
+                    : '—'}
                 </td>
                 <td className="px-4 py-3 text-xs text-gray-400">
                   {row.ended_at ? new Date(row.ended_at).toLocaleString() : '—'}

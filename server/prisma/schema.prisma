@@ -55,10 +55,10 @@ model Activity {
   status            ActivityStatus   @default(RUNNING)
   started_at        DateTime         @default(now())
   ended_at          DateTime?
-  // Set true once elapsed time crosses 100% of standard
-  overdue_flag      Boolean          @default(false)
-  acknowledged_by   String?
-  acknowledged_at   DateTime?
+  overdue_flag           Boolean          @default(false)
+  acknowledged_by        String?
+  acknowledged_at        DateTime?
+  idle_before_start_sec  Int?
 
   machine           Machine          @relation(fields: [machine_number], references: [machine_number])
   item_master       ItemMaster       @relation(fields: [item_master_no], references: [item_master_no])
