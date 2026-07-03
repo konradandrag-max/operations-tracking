@@ -41,6 +41,22 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
+
+  // Sync from Google Sheets every 5 minutes if GOOGLE_SHEET_ID is configured
+  if (process.env.GOOGLE_SHEET_ID) {
+    const syncSheets = async () => {
+      try {
+        const res = await fetch(`http://localhost:${PORT}/api/sync`, { method: 'POST' })
+        const data = await res.json() as { machines?: { upserted: number }; parts?: { upserted: number } }
+        console.log(`Sheets sync: ${data.machines?.upserted ?? 0} machines, ${data.parts?.upserted ?? 0} parts`)
+      } catch (err) {
+        console.error('Sheets sync failed:', err)
+      }
+    }
+    // Initial sync on startup, then every 5 minutes
+    setTimeout(syncSheets, 5000)
+    setInterval(syncSheets, 5 * 60 * 1000)
+  }
 })
 
 export default app
