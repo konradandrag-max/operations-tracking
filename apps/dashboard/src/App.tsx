@@ -3,6 +3,7 @@ import { Plant } from './api.ts'
 import { useActiveActivities } from './useActiveActivities.ts'
 import MachineCard from './components/MachineCard.tsx'
 import HistoryView from './components/HistoryView.tsx'
+import { exportWeeklyCsv } from './lib/exportWeeklyCsv.ts'
 
 type Tab = 'live' | 'history'
 const PLANTS: Plant[] = ['KSB2', 'KSB6', 'KSB7']
@@ -12,6 +13,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('live')
   const [plantFilter, setPlantFilter] = useState<Plant | 'ALL'>('ALL')
   const [overdueOnly, setOverdueOnly] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const { activities, lastUpdated, error, setActivities } = useActiveActivities()
 
   const overdueCount = activities.filter((a) => a.overdue_flag && !a.acknowledged_at).length
@@ -53,6 +55,16 @@ export default function App() {
             )}
           </div>
           <div className="flex items-center gap-4">
+            <button
+              onClick={async () => {
+                setExporting(true)
+                try { await exportWeeklyCsv() } finally { setExporting(false) }
+              }}
+              disabled={exporting}
+              className="rounded-lg bg-indigo-700 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-600 disabled:opacity-50"
+            >
+              {exporting ? 'Exporting...' : 'Export Week CSV'}
+            </button>
             {SHEET_URL && (
               <a
                 href={SHEET_URL}
