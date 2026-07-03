@@ -26,9 +26,10 @@ export function useIdleMachines() {
 
   const live = machines.map((m) => ({
     ...m,
-    idle_sec: m.idle_sec + offsetSec,
-    today_idle_sec: m.today_idle_sec + offsetSec,
-    today_idle_flagged: m.today_idle_flagged || (m.today_idle_sec + offsetSec) > 90 * 60,
+    idle_sec:               m.idle_sec + offsetSec,
+    today_idle_sec:         m.today_idle_sec + offsetSec,
+    today_working_idle_sec: (m.today_working_idle_sec ?? 0) + offsetSec,
+    today_idle_flagged:     m.today_idle_flagged || ((m.today_working_idle_sec ?? 0) + offsetSec) > 3 * 60 * 60,
   }))
 
   return { machines: live, refresh }

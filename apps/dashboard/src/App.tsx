@@ -3,11 +3,11 @@ import { Plant } from './api.ts'
 import { useActiveActivities } from './useActiveActivities.ts'
 import MachineCard from './components/MachineCard.tsx'
 import HistoryView from './components/HistoryView.tsx'
+import IdleTimesView from './components/IdleTimesView.tsx'
 import { exportWeeklyCsv } from './lib/exportWeeklyCsv.ts'
 import { useIdleMachines } from './useIdleMachines.ts'
-import IdleCard from './components/IdleCard.tsx'
 
-type Tab = 'live' | 'history'
+type Tab = 'live' | 'history' | 'idle-times'
 const PLANTS: Plant[] = ['KSB2', 'KSB6', 'KSB7']
 const SHEET_URL = import.meta.env.VITE_SHEET_URL ?? ''
 
@@ -25,18 +25,7 @@ export default function App() {
   })
   const [exportTo, setExportTo] = useState(() => new Date().toISOString().slice(0, 10))
   const { activities, lastUpdated, error, setActivities } = useActiveActivities()
-  const { machines: idleMachinesAll, refresh: refreshIdle } = useIdleMachines()
-  const [dismissedIdleSet, setDismissedIdleSet] = useState<Set<string>>(new Set())
-
-  // When a machine starts a new job it leaves the idle list — clear stale dismissals automatically
-  const currentIdleNos = new Set(idleMachinesAll.map((m) => m.machine_number))
-  const activeDismissed = new Set([...dismissedIdleSet].filter((n) => currentIdleNos.has(n)))
-  const idleMachines = idleMachinesAll.filter((m) => !activeDismissed.has(m.machine_number))
-
-  function handleIdleDismissed(machine_number: string, _by: string) {
-    setDismissedIdleSet((prev) => new Set([...prev, machine_number]))
-    refreshIdle()
-  }
+  const { machines: idleMachines } = useIdleMachines()
 
   const overdueCount = activities.filter((a) => a.overdue_flag && !a.acknowledged_at).length
 
@@ -149,7 +138,7 @@ export default function App() {
               </a>
             )}
 
-            {/* Live / History tabs */}
+            {/* Live / History / Idle Times tabs */}
             <div className="flex rounded-lg bg-gray-800 p-1">
               <button
                 onClick={() => setTab('live')}
@@ -162,6 +151,12 @@ export default function App() {
                 className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${tab === 'history' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
               >
                 History
+              </button>
+              <button
+                onClick={() => setTab('idle-times')}
+                className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${tab === 'idle-times' ? 'bg-yellow-600 text-white' : 'text-gray-400 hover:text-white'}`}
+              >
+                Idle Times
               </button>
             </div>
           </div>
@@ -229,26 +224,42 @@ export default function App() {
           </>
         )}
 
-        {/* Idle machines section */}
-        {tab === 'live' && idleMachines.length > 0 && (
-          <section className="mt-8">
-            <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3">
-              Idle Machines — {idleMachines.length} between jobs
-              {activeDismissed.size > 0 && (
-                <span className="ml-2 font-normal text-gray-600">({activeDismissed.size} dismissed)</span>
-              )}
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-              {idleMachines
-                .sort((a, b) => b.idle_sec - a.idle_sec)
-                .map((m) => (
-                  <IdleCard key={m.machine_number} machine={m} onDismissed={handleIdleDismissed} />
+        {/* Daily idle alerts — only show machines that exceeded 3h (weekdays only) */}
+        {tab === 'live' && (() => {
+          const flaggedIdle = idleMachines.filter((m) => m.today_idle_flagged && !m.daily_idle_dismissed_by)
+          if (flaggedIdle.length === 0) return null
+          return (
+            <section className="mt-8">
+              <h2 className="text-sm font-bold text-red-400 uppercase tracking-widest mb-3">
+                ⚠ Idle Alert — {flaggedIdle.length} machine{flaggedIdle.length > 1 ? 's' : ''} exceeded 3h idle today
+              </h2>
+              <p className="text-xs text-gray-500 mb-3">
+                View full idle timeline in the <button className="text-yellow-400 underline" onClick={() => setTab('idle-times')}>Idle Times</button> tab.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {flaggedIdle.map((m) => (
+                  <div key={m.machine_number} className="rounded-2xl border-2 border-red-600 bg-red-950 p-4 flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-xs text-gray-400">{m.plant}</p>
+                      <p className="font-bold text-white">{m.machine_number}</p>
+                      <p className="text-xs text-gray-400">{m.machine_description}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-mono font-bold text-red-400">
+                        {Math.floor((m.today_working_idle_sec ?? m.today_idle_sec) / 3600)}h {Math.floor(((m.today_working_idle_sec ?? m.today_idle_sec) % 3600) / 60)}m
+                      </p>
+                      <p className="text-xs text-gray-500">idle today</p>
+                    </div>
+                  </div>
                 ))}
-            </div>
-          </section>
-        )}
+              </div>
+            </section>
+          )
+        })()}
 
         {tab === 'history' && <HistoryView />}
+
+        {tab === 'idle-times' && <IdleTimesView defaultPlant={plantFilter} />}
       </main>
       <footer className="text-center text-xs text-gray-700 py-2">
         &copy; {new Date().getFullYear()} Konrad Andrag

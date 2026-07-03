@@ -7,7 +7,9 @@ const router = Router()
 
 // GET /api/activities/active — polled by dashboard every 5 seconds
 // NOTE: Socket.io is a drop-in upgrade path if 5-second polling proves too slow.
-const DAILY_IDLE_LIMIT_SEC = 90 * 60 // 1.5 hours
+const DAILY_IDLE_LIMIT_SEC = 3 * 60 * 60 // 3 hours — weekdays only
+
+function isWeekend(d: Date) { const w = d.getDay(); return w === 0 || w === 6 }
 
 router.get('/active', async (_req, res) => {
   const now = new Date()
@@ -76,7 +78,7 @@ router.get('/active', async (_req, res) => {
       open_interval_start: act.intervals.find((iv) => !iv.interval_end)?.interval_start ?? null,
       idle_before_start_sec: act.idle_before_start_sec,
       today_idle_sec: todayIdleMap.get(act.machine_number) ?? 0,
-      today_idle_flagged: (todayIdleMap.get(act.machine_number) ?? 0) > DAILY_IDLE_LIMIT_SEC,
+      today_idle_flagged: !isWeekend(now) && (todayIdleMap.get(act.machine_number) ?? 0) > DAILY_IDLE_LIMIT_SEC,
     }
   })
 

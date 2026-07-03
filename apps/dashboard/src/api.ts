@@ -37,9 +37,45 @@ export interface IdleMachine {
   last_ended_at: string
   idle_sec: number
   today_idle_sec: number
+  today_working_idle_sec: number
   today_idle_flagged: boolean
   daily_idle_dismissed_by: string | null
   daily_idle_dismissed_at: string | null
+}
+
+export interface IdlePause {
+  paused_at: string
+  resumed_at: string | null
+  duration_sec: number
+}
+
+export interface IdleTimelineEntry {
+  type: 'activity' | 'idle'
+  // activity fields
+  id?: string
+  item_master_no?: string
+  part_number?: string
+  description?: string
+  activity_type?: ActivityType
+  status?: ActivityStatus
+  started_at?: string
+  ended_at?: string | null
+  pauses?: IdlePause[]
+  // idle gap fields
+  from?: string
+  to?: string | null
+  duration_sec?: number
+  working_idle_sec?: number
+}
+
+export interface MachineDailyDetail {
+  machine_number: string
+  plant: Plant
+  machine_description: string | null
+  total_working_idle_sec: number
+  flagged: boolean
+  is_currently_idle: boolean
+  timeline: IdleTimelineEntry[]
 }
 
 export interface HistoryActivity {
@@ -80,6 +116,13 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ machine_number, dismissed_by }),
     }).then((r) => r.json()),
+
+  getDailyDetail: (date?: string, plant?: string): Promise<MachineDailyDetail[]> => {
+    const qs = new URLSearchParams()
+    if (date) qs.set('date', date)
+    if (plant && plant !== 'ALL') qs.set('plant', plant)
+    return fetch(`${BASE}/api/idle/daily-detail?${qs}`).then((r) => r.json())
+  },
 
   getHistory: (params?: { plant?: string; machine_number?: string; from?: string; to?: string }): Promise<HistoryActivity[]> => {
     const qs = new URLSearchParams()
