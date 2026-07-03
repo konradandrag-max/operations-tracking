@@ -23,10 +23,9 @@ function parseCsv(text: string): string[][] {
     .filter(row => row.some(cell => cell !== ''))
 }
 
-function toSeconds(hours: string, minutes: string): number {
-  const h = parseFloat(hours) || 0
+function toSeconds(minutes: string): number {
   const m = parseFloat(minutes) || 0
-  return Math.round((h * 60 + m) * 60)
+  return Math.round(m * 60)
 }
 
 router.post('/', async (_req, res) => {
@@ -74,8 +73,8 @@ router.post('/', async (_req, res) => {
     for (const row of rows) {
       const item_master_no = row[0]?.toUpperCase()
       const description = row[1] || ''
-      const setup_sec = toSeconds(row[2], row[3])
-      const cycle_sec = toSeconds(row[4], row[5])
+      const setup_sec = toSeconds(row[2])
+      const cycle_sec = toSeconds(row[3])
 
       if (!item_master_no || setup_sec <= 0 || cycle_sec <= 0) {
         results.parts.skipped++
